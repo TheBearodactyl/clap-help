@@ -1,3 +1,7 @@
+<a name="1.5.0"></a>
+### v1.5.0 - 2025-08-29
+- update termimad to 0.34
+
 <a name="1.4.0"></a>
 ### v1.4.0 - 2025-05-09
 - update termimad to 0.32, crossterm to 0.29
