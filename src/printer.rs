@@ -101,6 +101,223 @@ ${details-default}${details-possible-values}${details-env}
 }
 ";
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StylePreset {
+    CatppuccinLatte,
+    CatppuccinFrappe,
+    CatppuccinMacchiato,
+    CatppuccinMocha,
+    RosePineMain,
+    RosePineMoon,
+    RosePineDawn,
+    KanagawaWave,
+    KanagawaDragon,
+    KanagawaLotus,
+}
+
+impl StylePreset {
+    /// Get all available preset names
+    pub fn all_names() -> Vec<&'static str> {
+        vec![
+            "catppuccin-latte",
+            "catppuccin-frappe",
+            "catppuccin-macchiato",
+            "catppuccin-mocha",
+            "rose-pine-main",
+            "rose-pine-moon",
+            "rose-pine-dawn",
+            "kanagawa-wave",
+            "kanagawa-dragon",
+            "kanagawa-lotus",
+        ]
+    }
+
+    /// Parse a preset from a string name
+    pub fn from_name(name: &str) -> Option<Self> {
+        match name.to_lowercase().as_str() {
+            "catppuccin-latte" => Some(Self::CatppuccinLatte),
+            "catppuccin-frappe" => Some(Self::CatppuccinFrappe),
+            "catppuccin-macchiato" => Some(Self::CatppuccinMacchiato),
+            "catppuccin-mocha" => Some(Self::CatppuccinMocha),
+            "rose-pine-main" => Some(Self::RosePineMain),
+            "rose-pine-moon" => Some(Self::RosePineMoon),
+            "rose-pine-dawn" => Some(Self::RosePineDawn),
+            "kanagawa-wave" => Some(Self::KanagawaWave),
+            "kanagawa-dragon" => Some(Self::KanagawaDragon),
+            "kanagawa-lotus" => Some(Self::KanagawaLotus),
+            _ => None,
+        }
+    }
+
+    /// Get the preset name as a string
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::CatppuccinLatte => "catppuccin-latte",
+            Self::CatppuccinFrappe => "catppuccin-frappe",
+            Self::CatppuccinMacchiato => "catppuccin-macchiato",
+            Self::CatppuccinMocha => "catppuccin-mocha",
+            Self::RosePineMain => "rose-pine-main",
+            Self::RosePineMoon => "rose-pine-moon",
+            Self::RosePineDawn => "rose-pine-dawn",
+            Self::KanagawaWave => "kanagawa-wave",
+            Self::KanagawaDragon => "kanagawa-dragon",
+            Self::KanagawaLotus => "kanagawa-lotus",
+        }
+    }
+
+    /// Create a MadSkin with the preset's styling
+    pub fn create_skin(&self) -> MadSkin {
+        match self {
+            Self::CatppuccinLatte => {
+                let mut skin = MadSkin::default();
+                skin.set_headers_fg(termimad::rgb(136, 57, 239));
+                skin.bold.set_fg(termimad::rgb(210, 15, 57));
+                skin.italic.set_fg(termimad::rgb(234, 118, 203));
+                skin.code_block.set_fg(termimad::rgb(64, 160, 43));
+                skin.inline_code.set_fg(termimad::rgb(23, 146, 153));
+                skin.strikeout.set_fg(termimad::rgb(108, 111, 133));
+                skin.paragraph.set_fg(termimad::rgb(76, 79, 105));
+                skin
+            }
+            Self::CatppuccinFrappe => {
+                let mut skin = MadSkin::default();
+                skin.set_headers_fg(termimad::rgb(202, 158, 230));
+                skin.bold.set_fg(termimad::rgb(231, 130, 132));
+                skin.italic.set_fg(termimad::rgb(244, 184, 228));
+                skin.code_block.set_fg(termimad::rgb(166, 209, 137));
+                skin.inline_code.set_fg(termimad::rgb(129, 200, 190));
+                skin.strikeout.set_fg(termimad::rgb(165, 173, 206));
+                skin.paragraph.set_fg(termimad::rgb(198, 208, 245));
+                skin
+            }
+            Self::CatppuccinMacchiato => {
+                let mut skin = MadSkin::default();
+                skin.set_headers_fg(termimad::rgb(198, 160, 246));
+                skin.bold.set_fg(termimad::rgb(237, 135, 150));
+                skin.italic.set_fg(termimad::rgb(245, 189, 230));
+                skin.code_block.set_fg(termimad::rgb(166, 218, 149));
+                skin.inline_code.set_fg(termimad::rgb(139, 213, 202));
+                skin.strikeout.set_fg(termimad::rgb(165, 173, 203));
+                skin.paragraph.set_fg(termimad::rgb(202, 211, 245));
+                skin
+            }
+            Self::CatppuccinMocha => {
+                let mut skin = MadSkin::default();
+                skin.set_headers_fg(termimad::rgb(203, 166, 247));
+                skin.bold.set_fg(termimad::rgb(243, 139, 168));
+                skin.italic.set_fg(termimad::rgb(245, 194, 231));
+                skin.code_block.set_fg(termimad::rgb(166, 227, 161));
+                skin.inline_code.set_fg(termimad::rgb(148, 226, 213));
+                skin.strikeout.set_fg(termimad::rgb(166, 173, 200));
+                skin.paragraph.set_fg(termimad::rgb(205, 214, 244));
+                skin
+            }
+            Self::RosePineMain => {
+                let mut skin = MadSkin::default();
+                skin.set_headers_fg(termimad::rgb(196, 167, 231));
+                skin.bold.set_fg(termimad::rgb(235, 111, 146));
+                skin.italic.set_fg(termimad::rgb(246, 193, 119));
+                skin.code_block.set_fg(termimad::rgb(49, 116, 143));
+                skin.inline_code.set_fg(termimad::rgb(156, 207, 216));
+                skin.strikeout.set_fg(termimad::rgb(110, 106, 134));
+                skin.paragraph.set_fg(termimad::rgb(224, 222, 244));
+                skin
+            }
+            Self::RosePineMoon => {
+                let mut skin = MadSkin::default();
+                skin.set_headers_fg(termimad::rgb(196, 167, 231));
+                skin.bold.set_fg(termimad::rgb(235, 111, 146));
+                skin.italic.set_fg(termimad::rgb(246, 193, 119));
+                skin.code_block.set_fg(termimad::rgb(62, 143, 176));
+                skin.inline_code.set_fg(termimad::rgb(156, 207, 216));
+                skin.strikeout.set_fg(termimad::rgb(110, 106, 134));
+                skin.paragraph.set_fg(termimad::rgb(224, 222, 244));
+                skin
+            }
+            Self::RosePineDawn => {
+                let mut skin = MadSkin::default();
+                skin.set_headers_fg(termimad::rgb(144, 122, 169));
+                skin.bold.set_fg(termimad::rgb(180, 99, 122));
+                skin.italic.set_fg(termimad::rgb(234, 157, 52));
+                skin.code_block.set_fg(termimad::rgb(40, 105, 131));
+                skin.inline_code.set_fg(termimad::rgb(86, 148, 159));
+                skin.strikeout.set_fg(termimad::rgb(152, 147, 165));
+                skin.paragraph.set_fg(termimad::rgb(87, 82, 121));
+                skin
+            }
+            Self::KanagawaWave => {
+                let mut skin = MadSkin::default();
+                skin.set_headers_fg(termimad::rgb(149, 127, 184));
+                skin.bold.set_fg(termimad::rgb(192, 163, 110));
+                skin.italic.set_fg(termimad::rgb(255, 160, 102));
+                skin.code_block.set_fg(termimad::rgb(118, 148, 106));
+                skin.inline_code.set_fg(termimad::rgb(122, 168, 159));
+                skin.strikeout.set_fg(termimad::rgb(84, 84, 109));
+                skin.paragraph.set_fg(termimad::rgb(220, 215, 186));
+                skin
+            }
+            Self::KanagawaDragon => {
+                let mut skin = MadSkin::default();
+                skin.set_headers_fg(termimad::rgb(139, 164, 176));
+                skin.bold.set_fg(termimad::rgb(196, 116, 110));
+                skin.italic.set_fg(termimad::rgb(196, 178, 138));
+                skin.code_block.set_fg(termimad::rgb(135, 169, 135));
+                skin.inline_code.set_fg(termimad::rgb(142, 164, 162));
+                skin.strikeout.set_fg(termimad::rgb(98, 94, 90));
+                skin.paragraph.set_fg(termimad::rgb(197, 201, 197));
+                skin
+            }
+            Self::KanagawaLotus => {
+                let mut skin = MadSkin::default();
+                skin.set_headers_fg(termimad::rgb(111, 92, 124));
+                skin.bold.set_fg(termimad::rgb(200, 64, 83));
+                skin.italic.set_fg(termimad::rgb(204, 109, 0));
+                skin.code_block.set_fg(termimad::rgb(111, 137, 78));
+                skin.inline_code.set_fg(termimad::rgb(89, 123, 117));
+                skin.strikeout.set_fg(termimad::rgb(113, 110, 97));
+                skin.paragraph.set_fg(termimad::rgb(84, 84, 100));
+                skin
+            }
+        }
+    }
+
+    /// Check if this is a light theme
+    pub fn is_light(&self) -> bool {
+        matches!(
+            self,
+            Self::CatppuccinLatte | Self::RosePineDawn | Self::KanagawaLotus
+        )
+    }
+
+    /// Get the theme family name
+    pub fn family(&self) -> &'static str {
+        match self {
+            Self::CatppuccinLatte
+            | Self::CatppuccinFrappe
+            | Self::CatppuccinMacchiato
+            | Self::CatppuccinMocha => "Catppuccin",
+            Self::RosePineMain | Self::RosePineMoon | Self::RosePineDawn => "Rose Pine",
+            Self::KanagawaWave | Self::KanagawaDragon | Self::KanagawaLotus => "Kanagawa",
+        }
+    }
+
+    /// Get the variant name within the theme family
+    pub fn variant(&self) -> &'static str {
+        match self {
+            Self::CatppuccinLatte => "Latte",
+            Self::CatppuccinFrappe => "Frappé",
+            Self::CatppuccinMacchiato => "Macchiato",
+            Self::CatppuccinMocha => "Mocha",
+            Self::RosePineMain => "Main",
+            Self::RosePineMoon => "Moon",
+            Self::RosePineDawn => "Dawn",
+            Self::KanagawaWave => "Wave",
+            Self::KanagawaDragon => "Dragon",
+            Self::KanagawaLotus => "Lotus",
+        }
+    }
+}
+
 /// Keys used to enable/disable/change templates
 pub static TEMPLATES: &[&str] = &[
     "title",
