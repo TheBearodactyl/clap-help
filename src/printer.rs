@@ -1,3 +1,5 @@
+#![allow(clippy::needless_doctest_main)]
+
 use {
     clap::{ArgAction, Command},
     std::collections::HashMap,
@@ -27,14 +29,33 @@ ${positional-lines
 }
 ";
 
+/// Default template for the "description" section
+pub static TEMPLATE_DESCRIPTION: &str = "
+${about}
+";
+
+/// Default template for the "subcommands" section
+pub static TEMPLATE_SUBCOMMANDS: &str = "
+**Subcommands:**
+${subcommand-lines
+* `${sub-name}`: ${sub-about}
+}
+";
+
+/// Default template for an "examples" section
+pub static TEMPLATE_EXAMPLES: &str = "
+**Examples:**
+${after_help}
+";
+
 /// Default template for the "options" section
 pub static TEMPLATE_OPTIONS: &str = "
 **Options:**
 |:-:|:-:|:-:|:-|
-|short|long|value|description|
+| short | long | value | description |
 |:-:|:-|:-:|:-|
 ${option-lines
-|${short}|${long}|${value}|${help}${possible_values}${default}|
+| ${short} | ${long} | ${value} | ${help}${possible_values}${default} |
 }
 |-
 ";
@@ -51,15 +72,46 @@ ${option-lines
 |-
 ";
 
+pub static TEMPLATE_OPTIONS_LIST: &str = "
+**Options:**
+${option-lines
+* `${flags-compact}` `${value-braced}`
+    *${help}*${details-default}${details-possible-values}${details-env}
+}
+";
+
+pub static TEMPLATE_OPTIONS_COMPACT_TABLE: &str = "
+**Options:**
+|:-|:-|
+|flags|description|
+|---|---|
+${option-lines
+|`${flags-compact}` `${value-braced}`|${help}${possible_values}${default}|
+}
+|-
+";
+
+pub static TEMPLATE_OPTIONS_VERBOSE: &str = "
+**Options:**
+${option-lines
+---
+**`${flags-compact}`** `${value-braced}`
+> ${help}
+${details-default}${details-possible-values}${details-env}
+}
+";
+
 /// Keys used to enable/disable/change templates
 pub static TEMPLATES: &[&str] = &[
     "title",
     "author",
+    "description",
     "introduction",
     "usage",
     "positionals",
     "options",
-    "bugs",
+    "subcommands",
+    "examples",
 ];
 
 /// An object which you can configure to print the help of a command
@@ -116,6 +168,9 @@ impl<'t> Printer<'t> {
         templates.insert("usage", TEMPLATE_USAGE);
         templates.insert("positionals", TEMPLATE_POSITIONALS);
         templates.insert("options", TEMPLATE_OPTIONS);
+        templates.insert("description", TEMPLATE_DESCRIPTION);
+        templates.insert("subcommands", TEMPLATE_SUBCOMMANDS);
+        templates.insert("examples", TEMPLATE_EXAMPLES);
         Self {
             skin: Self::make_skin(),
             expander,
@@ -125,6 +180,7 @@ impl<'t> Printer<'t> {
             max_width: None,
         }
     }
+
     /// Build a skin for the detected theme of the terminal
     /// (i.e. dark, light, or other)
     pub fn make_skin() -> MadSkin {
@@ -134,11 +190,13 @@ impl<'t> Printer<'t> {
             _ => MadSkin::default(),
         }
     }
+
     /// Use the provided skin
     pub fn with_skin(mut self, skin: MadSkin) -> Self {
         self.skin = skin;
         self
     }
+
     /// Set a maximal width, so that the whole terminal width isn't used.
     ///
     /// This may make some long sentences easier to read on super wide
@@ -149,32 +207,38 @@ impl<'t> Printer<'t> {
         self.max_width = Some(w);
         self
     }
+
     /// Give a mutable reference to the current skin
     /// (by default the automatically selected one)
     /// so that it can be modified
     pub fn skin_mut(&mut self) -> &mut MadSkin {
         &mut self.skin
     }
+
     /// Change a template
     pub fn set_template(&mut self, key: &'static str, template: &'t str) {
         self.templates.insert(key, template);
     }
+
     /// Change or add a template
     pub fn with(mut self, key: &'static str, template: &'t str) -> Self {
         self.set_template(key, template);
         self
     }
+
     /// Unset a template
     pub fn without(mut self, key: &'static str) -> Self {
         self.templates.remove(key);
         self
     }
+
     /// A mutable reference to the list of template keys, so that you can
     /// insert new keys, or change their order.
     /// Any key without matching template will just be ignored
     pub fn template_keys_mut(&mut self) -> &mut Vec<&'static str> {
         &mut self.template_keys
     }
+
     /// A mutable reference to the list of template keys, so that you can
     /// insert new keys, or change their order.
     /// Any key without matching template will just be ignored
@@ -182,32 +246,58 @@ impl<'t> Printer<'t> {
     pub fn template_order_mut(&mut self) -> &mut Vec<&'static str> {
         &mut self.template_keys
     }
+
     fn make_expander(cmd: &Command) -> OwningTemplateExpander<'static> {
         let mut expander = OwningTemplateExpander::new();
         expander.set_default("");
         let name = cmd.get_bin_name().unwrap_or_else(|| cmd.get_name());
         expander.set("name", name);
+
         if let Some(author) = cmd.get_author() {
             expander.set("author", author);
         }
         if let Some(version) = cmd.get_version() {
             expander.set("version", version);
         }
+
+        if let Some(about) = cmd.get_about() {
+            expander.set_md("about", about.to_string());
+        }
+
+        if let Some(after_help) = cmd.get_after_help() {
+            expander.set_md("after_help", after_help.to_string());
+        }
+
         let options = cmd
             .get_arguments()
             .filter(|a| !a.is_hide_set())
             .filter(|a| a.get_short().is_some() || a.get_long().is_some());
+
         for arg in options {
             let sub = expander.sub("option-lines");
-            if let Some(short) = arg.get_short() {
+
+            let short_flag = arg.get_short();
+            let long_flag = arg.get_long();
+
+            let flags_compact = match (short_flag, long_flag) {
+                (Some(s), Some(l)) => format!("-{s}, --{l}"),
+                (None, Some(l)) => format!("    --{l}"),
+                (Some(s), None) => format!("-{s}"),
+                (None, None) => String::new(),
+            };
+            sub.set("flags-compact", flags_compact);
+
+            if let Some(short) = short_flag {
                 sub.set("short", format!("-{short}"));
             }
-            if let Some(long) = arg.get_long() {
+            if let Some(long) = long_flag {
                 sub.set("long", format!("--{long}"));
             }
+
             if let Some(help) = arg.get_help() {
                 sub.set_md("help", help.to_string());
             }
+
             if arg.get_action().takes_values() {
                 if let Some(name) = arg.get_value_names().and_then(|arr| arr.first()) {
                     sub.set("value", name);
@@ -223,29 +313,42 @@ impl<'t> Printer<'t> {
                     }
                 };
             }
+
+            if let Some(env_var) = arg.get_env() {
+                sub.set_md(
+                    "details-env",
+                    format!("\n    * *Environment*: `{}`", env_var.to_string_lossy()),
+                );
+            }
+
             let mut possible_values = arg.get_possible_values();
             if !possible_values.is_empty() {
-                let possible_values: Vec<String> = possible_values
+                let values: Vec<String> = possible_values
                     .drain(..)
                     .map(|v| format!("`{}`", v.get_name()))
                     .collect();
-                expander.sub("option-lines").set_md(
+                sub.set_md(
                     "possible_values",
-                    format!(" Possible values: [{}]", possible_values.join(", ")),
+                    format!(" Possible values: [{}]", values.join(", ")),
+                );
+                sub.set_md(
+                    "details-possible-values",
+                    format!("\n    * *Possible values*: {}", values.join(", ")),
                 );
             }
+
             if let Some(default) = arg.get_default_values().first() {
-                match arg.get_action() {
-                    ArgAction::Set | ArgAction::Append => {
-                        expander.sub("option-lines").set_md(
-                            "default",
-                            format!(" Default: `{}`", default.to_string_lossy()),
-                        );
-                    }
-                    _ => {}
+                if matches!(arg.get_action(), ArgAction::Set | ArgAction::Append) {
+                    let default_str = default.to_string_lossy();
+                    sub.set_md("default", format!(" Default: `{}`", &default_str));
+                    sub.set_md(
+                        "details-default",
+                        format!("\n    * *Default*: `{}`", &default_str),
+                    );
                 }
             }
         }
+
         let mut args = String::new();
         for arg in cmd.get_positionals() {
             let Some(key) = arg.get_value_names().and_then(|arr| arr.first()) else {
@@ -269,14 +372,25 @@ impl<'t> Printer<'t> {
             }
         }
         expander.set("positional-args", args);
+
+        for subcmd in cmd.get_subcommands() {
+            let sub = expander.sub("subcommand-lines");
+            sub.set("sub-name", subcmd.get_name());
+            if let Some(about) = subcmd.get_about() {
+                sub.set_md("sub-about", about.to_string());
+            }
+        }
+
         expander
     }
+
     /// Give you a mut reference to the expander, so that you can overload
     /// the variable of the expander used to fill the templates of the help,
     /// or add new variables for your own templates
     pub fn expander_mut(&mut self) -> &mut OwningTemplateExpander<'static> {
         &mut self.expander
     }
+
     /// Print the provided template with the printer's expander
     ///
     /// It's normally more convenient to change template_keys or some
@@ -284,6 +398,7 @@ impl<'t> Printer<'t> {
     pub fn print_template(&self, template: &str) {
         self.skin.print_owning_expander_md(&self.expander, template);
     }
+
     /// Print all the templates, in order
     pub fn print_help(&self) {
         if self.full_width {
@@ -292,6 +407,7 @@ impl<'t> Printer<'t> {
             self.print_help_content_width()
         }
     }
+
     fn print_help_full_width(&self) {
         for key in &self.template_keys {
             if let Some(template) = self.templates.get(key) {
@@ -299,6 +415,7 @@ impl<'t> Printer<'t> {
             }
         }
     }
+
     fn print_help_content_width(&self) {
         let (width, _) = termimad::terminal_size();
         let mut width = width as usize;
