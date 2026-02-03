@@ -127,9 +127,19 @@ impl<'t> Printer<'t> {
         templates.insert("title", TEMPLATE_TITLE);
         templates.insert("author", TEMPLATE_AUTHOR);
         templates.insert("usage", TEMPLATE_USAGE);
-        templates.insert("positionals", TEMPLATE_POSITIONALS);
-        templates.insert("options", TEMPLATE_OPTIONS);
-        templates.insert("subcommands", TEMPLATE_SUBCOMMANDS);
+
+        if cmd.get_positionals().count() != 0 {
+            templates.insert("positionals", TEMPLATE_POSITIONALS);
+        }
+
+        if cmd.get_opts().count() != 0 {
+            templates.insert("options", TEMPLATE_OPTIONS);
+        }
+
+        if cmd.has_subcommands() {
+            templates.insert("subcommands", TEMPLATE_SUBCOMMANDS);
+        }
+
         Self {
             skin: Self::make_skin(),
             expander,
@@ -226,114 +236,124 @@ impl<'t> Printer<'t> {
             .filter(|a| !a.is_hide_set())
             .filter(|a| a.get_short().is_some() || a.get_long().is_some());
 
-        for arg in options {
-            let sub = expander.sub("option-lines");
+        // they say it's the hackiest solution of all time
+        if !cmd
+            .clone()
+            .get_arguments()
+            .filter(|a| !a.is_hide_set())
+            .filter(|a| a.get_short().is_some() || a.get_long().is_some())
+            .collect::<Vec<_>>()
+            .is_empty()
+        {
+            for arg in options {
+                let sub = expander.sub("option-lines");
 
-            if let Some(short) = arg.get_short() {
-                sub.set("short", format!("-{short}"));
-            }
+                if let Some(short) = arg.get_short() {
+                    sub.set("short", format!("-{short}"));
+                }
 
-            if let Some(long) = arg.get_long() {
-                sub.set("long", format!("--{long}"));
-            }
+                if let Some(long) = arg.get_long() {
+                    sub.set("long", format!("--{long}"));
+                }
 
-            if let Some(help) = arg.get_help() {
-                sub.set_md("help", help.to_string());
-            }
+                if let Some(help) = arg.get_help() {
+                    sub.set_md("help", help.to_string());
+                }
 
-            if arg.get_action().takes_values() {
-                if let Some(name) = arg.get_value_names().and_then(|arr| arr.first()) {
-                    sub.set("value", name);
-                    let braced = format!("<{}>", name);
-                    sub.set("value-braced", &braced);
+                if arg.get_action().takes_values() {
+                    if let Some(name) = arg.get_value_names().and_then(|arr| arr.first()) {
+                        sub.set("value", name);
+                        let braced = format!("<{}>", name);
+                        sub.set("value-braced", &braced);
 
-                    if arg.get_short().is_some() {
-                        sub.set("value-short-braced", &braced);
-                        sub.set("value-short", name);
+                        if arg.get_short().is_some() {
+                            sub.set("value-short-braced", &braced);
+                            sub.set("value-short", name);
+                        }
+
+                        if arg.get_long().is_some() {
+                            sub.set("value-long-braced", &braced);
+                            sub.set("value-long", name);
+                        }
+                    };
+                }
+
+                let mut possible_values = arg.get_possible_values();
+
+                if !possible_values.is_empty() {
+                    let possible_values: Vec<String> = possible_values
+                        .drain(..)
+                        .map(|v| format!("`{}`", v.get_name()))
+                        .collect();
+
+                    expander.sub("option-lines").set_md(
+                        "possible_values",
+                        format!(" Possible values: [{}]", possible_values.join(", ")),
+                    );
+                }
+
+                if let Some(default) = arg.get_default_values().first() {
+                    match arg.get_action() {
+                        ArgAction::Set | ArgAction::Append => {
+                            expander.sub("option-lines").set_md(
+                                "default",
+                                format!(" Default: `{}`", default.to_string_lossy()),
+                            );
+                        }
+                        _ => {}
                     }
-
-                    if arg.get_long().is_some() {
-                        sub.set("value-long-braced", &braced);
-                        sub.set("value-long", name);
-                    }
-                };
-            }
-
-            let mut possible_values = arg.get_possible_values();
-
-            if !possible_values.is_empty() {
-                let possible_values: Vec<String> = possible_values
-                    .drain(..)
-                    .map(|v| format!("`{}`", v.get_name()))
-                    .collect();
-
-                expander.sub("option-lines").set_md(
-                    "possible_values",
-                    format!(" Possible values: [{}]", possible_values.join(", ")),
-                );
-            }
-
-            if let Some(default) = arg.get_default_values().first() {
-                match arg.get_action() {
-                    ArgAction::Set | ArgAction::Append => {
-                        expander.sub("option-lines").set_md(
-                            "default",
-                            format!(" Default: `{}`", default.to_string_lossy()),
-                        );
-                    }
-                    _ => {}
                 }
             }
         }
 
         let mut args = String::new();
-        for arg in cmd.get_positionals() {
-            let Some(key) = arg.get_value_names().and_then(|arr| arr.first()) else {
-                continue;
-            };
+        if !cmd.get_positionals().collect::<Vec<_>>().is_empty() {
+            for arg in cmd.get_positionals() {
+                let Some(key) = arg.get_value_names().and_then(|arr| arr.first()) else {
+                    continue;
+                };
 
-            args.push(' ');
+                args.push(' ');
 
-            if !arg.is_required_set() {
-                args.push('[');
-            }
+                if !arg.is_required_set() {
+                    args.push('[');
+                }
 
-            if arg.is_last_set() {
-                args.push_str("-- ");
-            }
+                if arg.is_last_set() {
+                    args.push_str("-- ");
+                }
 
-            args.push_str(key);
+                args.push_str(key);
 
-            if !arg.is_required_set() {
-                args.push(']');
-            }
+                if !arg.is_required_set() {
+                    args.push(']');
+                }
 
-            let sub = expander.sub("positional-lines");
-            sub.set("key", key);
+                let sub = expander.sub("positional-lines");
+                sub.set("key", key);
 
-            if let Some(help) = arg.get_help() {
-                sub.set("help", help);
-            }
-        }
-
-        if cmd.has_subcommands() {
-            args.push_str(" [COMMAND]");
-        }
-
-        expander.set("positional-args", args);
-
-        for subcommand in cmd.get_subcommands() {
-            if !subcommand.is_hide_set() {
-                let sub = expander.sub("subcommand-lines");
-                sub.set("name", subcommand.get_name());
-                if let Some(about) = subcommand.get_about() {
-                    sub.set_md("help", about.to_string());
-                } else {
-                    sub.set("help", "");
+                if let Some(help) = arg.get_help() {
+                    sub.set("help", help);
                 }
             }
         }
 
+        if !cmd.get_subcommands().collect::<Vec<_>>().is_empty() {
+            args.push_str(" [COMMAND]");
+            for subcommand in cmd.get_subcommands() {
+                if !subcommand.is_hide_set() {
+                    let sub = expander.sub("subcommand-lines");
+                    sub.set("name", subcommand.get_name());
+                    if let Some(about) = subcommand.get_about() {
+                        sub.set_md("help", about.to_string());
+                    } else {
+                        sub.set("help", "");
+                    }
+                }
+            }
+        }
+
+        expander.set("positional-args", args);
         expander
     }
 
